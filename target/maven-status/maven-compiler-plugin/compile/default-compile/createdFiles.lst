@@ -1,0 +1,10 @@
+cn/tujia/swiftutil/ContainerStoragePolicy.class
+META-INF/spring-configuration-metadata.json
+cn/tujia/swiftutil/enums/SwiftAccountEnum.class
+cn/tujia/swiftutil/config/SwiftServiceAutoConfiguaration.class
+cn/tujia/swiftutil/config/SwiftServiceProperties.class
+cn/tujia/swiftutil/common/Constants$Bucket.class
+cn/tujia/swiftutil/common/Constants.class
+cn/tujia/swiftutil/common/Constants$QnDomain.class
+cn/tujia/swiftutil/model/SwiftObject.class
+cn/tujia/swiftutil/SwiftService.class
