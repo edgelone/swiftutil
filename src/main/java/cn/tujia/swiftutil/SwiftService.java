@@ -7,6 +7,12 @@ import cn.tujia.swiftutil.model.ContainerStoragePolicy;
 import cn.tujia.swiftutil.model.SwiftObject;
 import cn.tujia.swiftutil.model.TokenInfo;
 import com.google.common.hash.Hashing;
+import com.google.gson.Gson;
+import com.qiniu.common.QiniuException;
+import com.qiniu.common.Zone;
+import com.qiniu.storage.Configuration;
+import com.qiniu.storage.UploadManager;
+import com.qiniu.storage.model.DefaultPutRet;
 import com.qiniu.util.Auth;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -76,6 +82,16 @@ public class SwiftService {
   }
 
 
+  /**
+   * 获取文件url 兼容qiniu和swift
+   *
+   * @param swiftUrl
+   * @param fileKey
+   * @param bucket
+   * @param suffix
+   * @param expire
+   * @return
+   */
   public String getUrl(String swiftUrl, String fileKey, String bucket, String suffix, Long expire) {
     if (StringUtils.isEmpty(swiftUrl)) {
       return getUrlByQiniu(fileKey, bucket, suffix, expire);
@@ -89,7 +105,7 @@ public class SwiftService {
    * @param inputStream
    * @return
    */
-  public String upload(String accountName, String objectName, InputStream inputStream) {
+  public String uploadBySwift(String accountName, String objectName, InputStream inputStream) {
     Container container = containerInit(accountName);
     if (container == null) {
       logger.error("error account name:{}", accountName);
@@ -100,11 +116,49 @@ public class SwiftService {
     return "/" + accountName + "/" + container.getName() + "/" + objectName;
   }
 
-  public String upload(String accountName, InputStream inputStream, String suffix) {
-    String objectName = System.currentTimeMillis() + "_" + (Math.random() * 9 + 1) * 100000 + suffix;
-    return upload(accountName, objectName, inputStream);
+  public String uploadByQiniu(String bucket, String fileName, InputStream inputStream) {
+    Configuration cfg = new Configuration(Zone.zone0());
+    UploadManager uploadManager = new UploadManager(cfg);
+
+    String upToken = auth.uploadToken(bucket);
+    try {
+      com.qiniu.http.Response response = uploadManager.put(inputStream, fileName, upToken, null, null);
+      DefaultPutRet putRet = new Gson().fromJson(response.bodyString(), DefaultPutRet.class);
+      logger.info("upload success fileKey is - " + putRet.key);
+      return putRet.key;
+    } catch (QiniuException e) {
+      logger.warn("upload failed fileKey: {}, error: {}", fileName, e);
+    }
+    return null;
   }
 
+  /**
+   * 上传文件
+   * 兼容qiniu和swift
+   *
+   * @param accountName
+   * @param inputStream
+   * @param suffix
+   * @return
+   */
+  public String upload(String accountName, String bucket, String fileName, InputStream inputStream, String suffix) {
+    if (StringUtils.isEmpty(accountName) && StringUtils.isEmpty(bucket)) {
+      return null;
+    }
+    if (!StringUtils.isEmpty(accountName)) {
+      String objectName = System.currentTimeMillis() + "_" + (Math.random() * 9 + 1) * 100000 + suffix;
+      return uploadBySwift(accountName, objectName, inputStream);
+    }
+    return uploadByQiniu(bucket, fileName, inputStream);
+  }
+
+  /**
+   * 获取swift文件
+   *
+   * @param swiftUrl
+   * @param suffix
+   * @return
+   */
   public String getUrlBySwift(String swiftUrl, String suffix) {
     suffix = formatSuffix(suffix);
 
@@ -134,6 +188,8 @@ public class SwiftService {
    * @return
    */
   public String getPrivateUrlBySwift(String swiftUrl, Long expire) {
+
+
     SwiftObject swiftObject = new SwiftObject(swiftUrl);
 
     Account account = accountInit(swiftObject.getAccount());
@@ -147,6 +203,15 @@ public class SwiftService {
     return storedObject.getTempGetUrl(expire);
   }
 
+  /**
+   * 获取七牛文件
+   *
+   * @param fileKey
+   * @param bucket
+   * @param suffix
+   * @param expire
+   * @return
+   */
   public String getUrlByQiniu(String fileKey, String bucket, String suffix, Long expire) {
 
     if (StringUtils.isEmpty(fileKey)) {
@@ -224,6 +289,13 @@ public class SwiftService {
     return String.format("day_%s", localDate.format(DateTimeFormatter.BASIC_ISO_DATE));
   }
 
+  /**
+   * 获取Swift上传token
+   * token有效期 <=90min
+   *
+   * @param account
+   * @return
+   */
   public TokenInfo getToken(String account) {
     String signature =
         Hashing.sha1().hashBytes((apiKey + account + "v0.1" + System.currentTimeMillis() + secretKey).getBytes())
@@ -250,5 +322,6 @@ public class SwiftService {
   private String formatSuffix(String suffix) {
     return Constants.SUFFIX_MAPPING.getOrDefault(suffix, suffix);
   }
+
 
 }

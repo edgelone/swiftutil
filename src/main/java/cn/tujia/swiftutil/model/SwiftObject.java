@@ -25,10 +25,13 @@ public class SwiftObject {
   }
 
   public SwiftObject(String swiftUrl) {
+
     splitSwiftUrl(swiftUrl);
   }
 
   private void splitSwiftUrl(String swiftUrl) {
+    assert validSwiftUrl(swiftUrl);
+
     if (!swiftUrl.startsWith("/")) {
       swiftUrl = "/" + swiftUrl;
     }
@@ -72,5 +75,12 @@ public class SwiftObject {
 
   public void setSuffixUrl(String suffixUrl) {
     this.suffixUrl = suffixUrl;
+  }
+
+  private boolean validSwiftUrl(String swfitUrl) {
+    if (swfitUrl.split("/").length >= 3) {
+      return true;
+    }
+    return false;
   }
 }
