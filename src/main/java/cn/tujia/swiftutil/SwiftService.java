@@ -1,13 +1,17 @@
 package cn.tujia.swiftutil;
 
 import cn.tujia.swiftutil.common.Constants;
+import cn.tujia.swiftutil.config.SwiftServiceProperties;
 import cn.tujia.swiftutil.enums.SwiftAccountEnum;
 import cn.tujia.swiftutil.model.ContainerStoragePolicy;
 import cn.tujia.swiftutil.model.SwiftObject;
+import cn.tujia.swiftutil.model.TokenInfo;
 import com.google.common.hash.Hashing;
 import com.qiniu.util.Auth;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.javaswift.joss.client.factory.AccountConfig;
 import org.javaswift.joss.client.factory.AccountFactory;
 import org.javaswift.joss.client.factory.AuthenticationMethod;
@@ -19,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.time.LocalDate;
@@ -32,6 +37,8 @@ import static cn.tujia.swiftutil.enums.SwiftAccountEnum.getAccountByAccountName;
 
 
 /**
+ * main API
+ *
  * @author lk
  * @date 2019/2/26
  */
@@ -40,7 +47,10 @@ public class SwiftService {
 
   private final static Logger logger = LoggerFactory.getLogger(SwiftService.class);
 
-  private final static Set<String> privateAccounts =
+  /**
+   * 敏感Account
+   */
+  private final static Set<String> PRIVATE_ACCOUNTS =
       new HashSet<>(Arrays.asList(FILEPRIVATE.getAccountName(), CERTIFICATIONIMAGE.getAccountName()));
 
   private String name;
@@ -48,16 +58,21 @@ public class SwiftService {
   private String authUrl;
   private Auth auth;
   private String env;
+  private String uploadUrl;
   private String downloadUrl;
+  private String apiKey;
+  private String secretKey;
 
-  public SwiftService(String name, String password, String authUrl, String qnAccessKey, String qnSecretKey,
-                      String env, String downloadUrl) {
-    this.name = name;
-    this.password = password;
-    this.authUrl = authUrl;
-    this.auth = Auth.create(qnAccessKey, qnSecretKey);
+  public SwiftService(SwiftServiceProperties swiftProps, String env) {
+    this.name = swiftProps.getName();
+    this.password = swiftProps.getPassword();
+    this.authUrl = swiftProps.getAuthUrl();
+    this.auth = Auth.create(swiftProps.getQnAccessKey(), swiftProps.getQnSecretKey());
     this.env = env;
-    this.downloadUrl = downloadUrl;
+    this.uploadUrl = swiftProps.getUploadUrl();
+    this.downloadUrl = swiftProps.getDownloadUrl();
+    this.apiKey = swiftProps.getApiKey();
+    this.secretKey = swiftProps.getSecretKey();
   }
 
 
@@ -85,20 +100,39 @@ public class SwiftService {
     return "/" + accountName + "/" + container.getName() + "/" + objectName;
   }
 
-  public String upload(String accountName, InputStream inputStream) {
-    String objectName = System.currentTimeMillis() + "_" + (Math.random() * 9 + 1) * 100000;
+  public String upload(String accountName, InputStream inputStream, String suffix) {
+    String objectName = System.currentTimeMillis() + "_" + (Math.random() * 9 + 1) * 100000 + suffix;
     return upload(accountName, objectName, inputStream);
   }
 
   public String getUrlBySwift(String swiftUrl, String suffix) {
+    suffix = formatSuffix(suffix);
+
     SwiftObject swiftObject = new SwiftObject(swiftUrl, suffix);
 
-    if (privateAccounts.contains(swiftObject.getAccount())) {
-      return getPrivateUrlBySwift(swiftUrl, 3600L);
+    if (PRIVATE_ACCOUNTS.contains(swiftObject.getAccount())) {
+      if (StringUtils.isEmpty(suffix)) {
+        return getPrivateUrlBySwift(swiftUrl, 3600L);
+      }
+      return getPrivateImageBySwift(swiftObject);
     }
-    return downloadUrl + swiftObject.getSuffixUrl();
+    return Util.combainUrlPart(downloadUrl, swiftObject.getSuffixUrl());
   }
 
+  private String getPrivateImageBySwift(SwiftObject swiftObject) {
+    TokenInfo tokenInfo = getToken(swiftObject.getAccount());
+
+    return Util.combainUrlPart(downloadUrl, swiftObject.getSuffixUrl()) + "?token=" + tokenInfo.getToken();
+
+  }
+
+  /**
+   * 获取私密文件
+   *
+   * @param swiftUrl
+   * @param expire
+   * @return
+   */
   public String getPrivateUrlBySwift(String swiftUrl, Long expire) {
     SwiftObject swiftObject = new SwiftObject(swiftUrl);
 
@@ -190,14 +224,31 @@ public class SwiftService {
     return String.format("day_%s", localDate.format(DateTimeFormatter.BASIC_ISO_DATE));
   }
 
-  private String getToken(String apiKey, String secretKey, String account) {
+  public TokenInfo getToken(String account) {
     String signature =
         Hashing.sha1().hashBytes((apiKey + account + "v0.1" + System.currentTimeMillis() + secretKey).getBytes())
             .toString();
     String param = Base64.getEncoder().encodeToString(signature.getBytes());
+    if (uploadUrl.endsWith("/")) {
+      uploadUrl = uploadUrl.substring(0, uploadUrl.length() - 1);
+    }
+    String url = uploadUrl + "/getToken?" + param;
     OkHttpClient client = new OkHttpClient.Builder().connectTimeout(2, TimeUnit.SECONDS).build();
-    Request request = new Request.Builder().build();
+    Request request = new Request.Builder().url(url).get().build();
 
-    return "";
+    Response response = null;
+    try {
+      response = client.newCall(request).execute();
+      return new ObjectMapper().readValue(response.body().toString(), TokenInfo.class);
+
+    } catch (IOException e) {
+      logger.error("get token fail ", e);
+    }
+    return null;
   }
+
+  private String formatSuffix(String suffix) {
+    return Constants.SUFFIX_MAPPING.getOrDefault(suffix, suffix);
+  }
+
 }

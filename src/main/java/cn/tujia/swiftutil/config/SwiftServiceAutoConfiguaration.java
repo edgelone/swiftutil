@@ -28,7 +28,6 @@ public class SwiftServiceAutoConfiguaration {
   @ConditionalOnMissingBean(SwiftService.class)
   public SwiftService swiftService() {
 
-    return new SwiftService(swiftProps.getName(), swiftProps.getPassword(),
-        swiftProps.getAuthUrl(), swiftProps.getQnAccessKey(), swiftProps.getQnSecretKey(), ENV,swiftProps.getDownloadUrl());
+    return new SwiftService(swiftProps, ENV);
   }
 }

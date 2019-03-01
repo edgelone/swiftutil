@@ -7,7 +7,7 @@ import org.springframework.util.StringUtils;
  * @date 2019/2/28
  */
 public class SwiftObject {
-  private final static String prefixFlag = "upload/";
+  private final static String prefixFlag = "/upload";
 
   private String account;
   private String container;
@@ -21,7 +21,7 @@ public class SwiftObject {
     if (StringUtils.isEmpty(suffix)) {
       return;
     }
-    this.suffixUrl = "/" + account + "/" + container + "/thumb/" + keyPre + "_" + suffix + keySuf;
+    this.suffixUrl = String.format("/%s/%s/thumb/%s_%s%s", account, container, keyPre, suffix, keySuf);
   }
 
   public SwiftObject(String swiftUrl) {
@@ -29,16 +29,17 @@ public class SwiftObject {
   }
 
   private void splitSwiftUrl(String swiftUrl) {
-    this.suffixUrl = swiftUrl;
-    if (swiftUrl.startsWith("/")) {
-      swiftUrl = swiftUrl.substring(1);
+    if (!swiftUrl.startsWith("/")) {
+      swiftUrl = "/" + swiftUrl;
     }
+    this.suffixUrl = swiftUrl;
+
     swiftUrl = swiftUrl.replace(prefixFlag, "");
 
     String[] keys = swiftUrl.split("/");
-    this.account = keys[0];
-    this.container = keys[1];
-    this.swiftKey = keys[2];
+    this.account = keys[1];
+    this.container = keys[2];
+    this.swiftKey = keys[3];
   }
 
   public String getAccount() {

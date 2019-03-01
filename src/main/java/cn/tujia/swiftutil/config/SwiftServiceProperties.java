@@ -11,10 +11,12 @@ public class SwiftServiceProperties {
   private String name;
   private String password;
   private String authUrl;
+  private String uploadUrl;
   private String downloadUrl;
+  private String apiKey;
+  private String secretKey;
   private String qnAccessKey;
   private String qnSecretKey;
-
 
   public String getName() {
     return name;
@@ -40,6 +42,38 @@ public class SwiftServiceProperties {
     this.authUrl = authUrl;
   }
 
+  public String getUploadUrl() {
+    return uploadUrl;
+  }
+
+  public void setUploadUrl(String uploadUrl) {
+    this.uploadUrl = uploadUrl;
+  }
+
+  public String getDownloadUrl() {
+    return downloadUrl;
+  }
+
+  public void setDownloadUrl(String downloadUrl) {
+    this.downloadUrl = downloadUrl;
+  }
+
+  public String getApiKey() {
+    return apiKey;
+  }
+
+  public void setApiKey(String apiKey) {
+    this.apiKey = apiKey;
+  }
+
+  public String getSecretKey() {
+    return secretKey;
+  }
+
+  public void setSecretKey(String secretKey) {
+    this.secretKey = secretKey;
+  }
+
   public String getQnAccessKey() {
     return qnAccessKey;
   }
@@ -54,13 +88,5 @@ public class SwiftServiceProperties {
 
   public void setQnSecretKey(String qnSecretKey) {
     this.qnSecretKey = qnSecretKey;
-  }
-
-  public String getDownloadUrl() {
-    return downloadUrl;
-  }
-
-  public void setDownloadUrl(String downloadUrl) {
-    this.downloadUrl = downloadUrl;
   }
 }
