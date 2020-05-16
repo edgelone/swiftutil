@@ -40,7 +40,7 @@ swiftutil:
 - swiftUrl 指通过新的方式上传至swift存储系统中的文件标识,作用相当于原先的 fileKey+bucket
 - swift 新存储系统(架构),使用openstack 开源框架 swift
 - joss swift对应的java sdk
-- 中间件 指途家为了实现切图处理和图片管理等功能使用java开发的一套系统,一般App端和PC端上传都会通过中间件,拿取切图也是通过g该中间件实现
+- 中间件 指为了实现切图处理和图片管理等功能使用java开发的一套系统,一般App端和PC端上传都会通过中间件,拿取切图也是通过g该中间件实现
 - token 一般指通过中间件获取到的account限定权限,通过token可以上传和下载文件
 - SDK上传 指服务端系统通过本SDK直连swift存储系统上传文件,不经过中间件
 
