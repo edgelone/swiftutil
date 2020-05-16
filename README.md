@@ -30,8 +30,8 @@ swiftutil:
   auth-url: "http://ttttt.com/auth/v1.0"
   qn-access-key: jfdiosajfdkjkLJJKGHJKGHJ
   qn-secret-key: dsadasdsa-SJIOJKLJFJ
-  download-url: "https://pic.fvt.tujia.com"
-  upload-url: "https://upload.fvt.tujia.com"
+  download-url: "https://pic.fvt.tua.com"
+  upload-url: "https://upload.fvt.tua.com"
   api-key: dsjaoidhsna
   secret-key: djioasfnsanl
 ```
